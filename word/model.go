@@ -82,8 +82,10 @@ type PPr struct {
 //Ind 首行：缩进、行高
 type Ind struct {
 	XMLName        xml.Name `xml:"w:ind"`
-	FirstLineChars int64    `xml:"w:firstLineChars,attr"` //
-	FirstLine      int64    `xml:"w:firstLine,attr"`
+	FirstLineChars int64    `xml:"w:firstLineChars,attr"` //首行缩进字符数，100是一个字符
+	LeftChars      int64    `xml:"w:leftChars,attr"`      //左缩进字符数，100是一个字符
+	RightChars     int64    `xml:"w:rightChars,attr"`     //右缩进字符数，100是一个字符
+	// FirstLine      int64    `xml:"w:firstLine,attr"`
 }
 
 // <w:ind w:firstLineChars="200" w:firstLine="420" />
@@ -149,12 +151,25 @@ type SzCs struct {
 	Val     int64    `xml:"w:val,attr,omitempty"`
 }
 
-//Spacing 行间距 <w:spacing w:after="400" w:line="720" w:lineRule="exact"/>
+// Spacing 行间距
+// <w:spacing w:before="360" w:after="120" w:line="480" w:lineRule="auto" w:beforeAutospacing="0" w:afterAutospacing="0"/>
+// http://officeopenxml.com/WPspacing.php
+// Values are in twentieths of a point. A normal single-spaced paragaph has a w:line value of 240, or 12 points.
+// To specify units in hundreths of a line, use attributes 'afterLines'/'beforeLines'.
+// The space between adjacent paragraphs will be the greater of the 'line' spacing of each paragraph, the spacing
+// after the first paragraph, and the spacing before the second paragraph. So if the first paragraph specifies 240
+// after and the second 80 before, and they are both single-spaced ('line' value of 240), then the space between
+// the paragraphs will be 240.
+// Specifies how the spacing between lines as specified in the line attribute is calculated.
+// Note: If the value of the lineRule attribute is atLeast or exactly, then the value of the line attribute is interpreted as 240th of a point. If the value of lineRule is auto, then the value of line is interpreted as 240th of a line.
 type Spacing struct {
-	XMLName  xml.Name `xml:"w:spacing"`
-	After    int64    `xml:"w:after,attr,omitempty"`
-	Line     int64    `xml:"w:line,attr,omitempty"`
-	LineRule LineRule `xml:"w:lineRule,attr,omitempty"`
+	XMLName           xml.Name `xml:"w:spacing"`
+	Before            int64    `xml:"w:before,attr,omitempty"`
+	After             int64    `xml:"w:after,attr,omitempty"`
+	Line              int64    `xml:"w:line,attr,omitempty"`
+	LineRule          LineRule `xml:"w:lineRule,attr,omitempty"`
+	BeforeAutospacing int64    `xml:"w:beforeAutospacing"`
+	AfterAutospacing  int64    `xml:"w:afterAutospacing"`
 }
 
 //Jc 对齐方式 <w:jc w:val="left"/>

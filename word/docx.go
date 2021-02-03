@@ -95,7 +95,7 @@ type Docx struct {
 //Paragraph 段落
 type Paragraph struct {
 	F     Font        //字体
-	S     Line        //行间距
+	L     Line        //行间距
 	T     []Text      //段落文本
 	Image *DrawImage  //图片
 	Rect  []*DrawRect //形状
@@ -139,19 +139,20 @@ type Text struct {
 
 //Font 字体
 type Font struct {
-	Font      string  //字体
-	FontSize  float64 //字号
-	FontColor string  //字体颜色
-	Bold      bool    //是否加粗
-	Align     string  //left, right, top, bottom
-	Space     bool    //xml:space="preserve" 包含空格
+	Family string  //字体
+	Size   float64 //字号
+	Color  string  //字体颜色
+	Bold   bool    //是否加粗
+	Align  string  //left, right, top, bottom
+	Space  bool    //xml:space="preserve" 包含空格
 }
 
 //Line 行高
 type Line struct {
-	LineRule       LineRule //auto exact
-	LineHeight     float64  //行间距，1倍为1.0, 1.5倍1.5，2倍2.0
+	Rule           LineRule //auto exact
+	Height         float64  //行间距，1倍为1.0, 1.5倍1.5，2倍2.0
 	FirstLineChars int64    //首行缩进字数，按汉字字宽算
+	Before         float64  //上边间距，1倍为1.0, 1.5倍1.5，2倍2.0
 	After          float64  //下边间距，1倍为1.0, 1.5倍1.5，2倍2.0
 }
 
@@ -182,21 +183,32 @@ func (d *Docx) AddParagraph(p []Paragraph) {
 }
 
 func (f *Font) getFontSize() int64 {
-	if f.FontSize > 0 {
-		return int64(f.FontSize * 2)
+	if f.Size > 0 {
+		return int64(f.Size * 2)
 	}
 	return 21 //默认五号
 }
 
 func (p *Paragraph) getLineHeight() int64 {
-	if p.F.FontSize > 0 {
-		return int64(math.Floor(p.F.FontSize*(p.S.LineHeight+1)+0.5) * 20)
+	if p.L.Height != 0 {
+		return int64(math.Floor(240 * p.L.Height)) //行距默认240个点
 	}
-	return 400 //默认五号，1.5倍行距
+	return 240 //默认五号，1.5倍行距
+}
+
+func (p *Paragraph) getRule() LineRule {
+	if len(p.L.Rule) > 0 {
+		return p.L.Rule
+	}
+	return LineRuleAuto
+}
+
+func (p *Paragraph) getBefore() int64 {
+	return int64(math.Floor(240 * p.L.Before))
 }
 
 func (p *Paragraph) getAfter() int64 {
-	return int64(p.F.FontSize*p.S.After) * 20
+	return int64(math.Floor(240 * p.L.After))
 }
 
 func (p *Paragraph) getAlign() string {
@@ -204,6 +216,10 @@ func (p *Paragraph) getAlign() string {
 		return p.F.Align
 	}
 	return "left"
+}
+
+func (p *Paragraph) getFirstLineChars() int64 {
+	return 100 * p.L.FirstLineChars
 }
 
 // WriteToFile 写到文件中
@@ -276,11 +292,11 @@ func (d *Docx) writeDocContent() (content []byte, rels []byte, err error) {
 		p := P{}
 		rPr := RPr{
 			RFonts: &RFonts{
-				ASCII:    paragraph.F.Font,
-				EastAsia: paragraph.F.Font,
-				HAnsi:    paragraph.F.Font,
+				ASCII:    paragraph.F.Family,
+				EastAsia: paragraph.F.Family,
+				HAnsi:    paragraph.F.Family,
 			},
-			Color: &Color{Val: paragraph.F.FontColor},
+			Color: &Color{Val: paragraph.F.Color},
 			Sz:    &Sz{Val: paragraph.F.getFontSize()},
 			SzCs:  &SzCs{Val: paragraph.F.getFontSize()},
 		}
@@ -292,12 +308,19 @@ func (d *Docx) writeDocContent() (content []byte, rels []byte, err error) {
 		p.PPr = &PPr{
 			SnapToGrid: &SnapToGrid{Val: "0"},
 			Spacing: &Spacing{
+				Before:   paragraph.getBefore(),
 				After:    paragraph.getAfter(),
 				Line:     paragraph.getLineHeight(),
-				LineRule: paragraph.S.LineRule,
+				LineRule: paragraph.getRule(),
 			},
 			Jc:  &Jc{Val: paragraph.getAlign()},
 			RPr: &rPr,
+		}
+
+		if paragraph.L.FirstLineChars > 0 {
+			p.PPr.Ind = &Ind{
+				FirstLineChars: paragraph.getFirstLineChars(),
+			}
 		}
 
 		//文本块
@@ -308,11 +331,11 @@ func (d *Docx) writeDocContent() (content []byte, rels []byte, err error) {
 			if t.F != nil {
 				r.RPr = &RPr{
 					RFonts: &RFonts{
-						ASCII:    t.F.Font,
-						EastAsia: t.F.Font,
-						HAnsi:    t.F.Font,
+						ASCII:    t.F.Family,
+						EastAsia: t.F.Family,
+						HAnsi:    t.F.Family,
 					},
-					Color: &Color{Val: t.F.FontColor},
+					Color: &Color{Val: t.F.Color},
 					Sz:    &Sz{Val: t.F.getFontSize()},
 					SzCs:  &SzCs{Val: t.F.getFontSize()},
 				}
